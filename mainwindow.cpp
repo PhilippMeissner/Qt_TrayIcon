@@ -35,16 +35,20 @@ void MainWindow::createTrayIcon(MainWindow *parent) {
     QAction *closeAction        = new QAction("Close", trayIconMenu);
     QAction *showMessageAction  = new QAction("Show Balloon", trayIconMenu);
     QAction *showAuthor         = new QAction("About", trayIconMenu);
+    QAction *retrieveCommitMessage = new QAction("Check Github", trayIconMenu);
+
 
     // Connect the actions so that we can do something when clicked
     trayIconMenu->connect(closeAction, SIGNAL(triggered(bool)), parent, SLOT(close()));
     trayIconMenu->connect(showMessageAction, SIGNAL(triggered(bool)), parent, SLOT(onShowBalloonMessageClicked()));
     trayIconMenu->connect(showAuthor, SIGNAL(triggered(bool)), parent, SLOT(onShowAuthorClicked()));
+    trayIconMenu->connect(retrieveCommitMessage, SIGNAL(triggered(bool)), parent, SLOT(onCheckGithubClicked()));
 
     // Add the actions to our menu
     trayIconMenu->addAction(closeAction);
     trayIconMenu->addAction(showMessageAction);
     trayIconMenu->addAction(showAuthor);
+    trayIconMenu->addAction(retrieveCommitMessage);
     _trayIcon->setContextMenu(trayIconMenu);
 
     // Show the finished trayicon
