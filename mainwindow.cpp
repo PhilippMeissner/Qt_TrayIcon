@@ -2,6 +2,10 @@
 #include "ui_mainwindow.h"
 #include <QIcon>
 #include <QDebug>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkReply>
+#include <QUrl>
+#include <QSsl>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
