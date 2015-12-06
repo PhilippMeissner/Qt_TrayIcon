@@ -60,7 +60,47 @@ void MainWindow::onShowBalloonMessageClicked() {
     _trayIcon->showMessage("Hi there!", "This is some crazy Balloon Message. Great, isn't it?", QSystemTrayIcon::Information, 2000);
 }
 
+
+
 // Private Slot -- Shows the original author
 void MainWindow::onShowAuthorClicked() {
     _trayIcon->showMessage("Author", "This program was originally created by Philipp Meissner \nGithub.com/PhilippMeissner\n Enjoy :)", QSystemTrayIcon::Information);
+}
+
+// Private Slot -- If Check Github was clicked
+void MainWindow::onCheckGithubClicked() {
+
+    QNetworkAccessManager *networkManager = new QNetworkAccessManager();
+
+    QUrl url("https://api.github.com/repos/philippmeissner/Qt_TrayIcon/commits");
+    QNetworkRequest request(url);
+    QNetworkReply *reply = networkManager->get(request);
+
+    QSslSocket * sslSocket = new QSslSocket(this);
+    QSslConfiguration config = sslSocket->sslConfiguration();
+    config.setProtocol(QSsl::SslV2);
+    sslSocket->setSslConfiguration(config);
+    reply->setSslConfiguration(config);
+
+    connect(reply, SIGNAL(finished()), this, SLOT(onRequestFinished()));
+}
+
+
+void MainWindow::onRequestFinished() {
+    // Error: qt.network.ssl: QSslSocket: cannot resolve SSLv2_server_method
+    // TODO: Read out JSON from data accordingly
+
+    QNetworkReply *reply = ((QNetworkReply *)sender());
+    QByteArray data = reply->readAll();
+    showBalloonMessage(data);
+}
+
+void MainWindow::showBalloonMessage(QByteArray data) {
+    QString completeResponse = "";
+
+    for(int i = 0; i < data.length(); i++) {
+        completeResponse += data[i];
+    }
+
+    _trayIcon->showMessage("We called the Github API!", completeResponse);
 }
