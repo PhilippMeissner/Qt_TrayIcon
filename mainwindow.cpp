@@ -13,12 +13,15 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     _ui->setupUi(this);
     createTrayIcon(this);
+    _timer = new QTimer(this);
+    _timerStarted = false;
 }
 
 // Let's remove all traces in our memory, in case Qt doesn't ;)
 MainWindow::~MainWindow() {
     delete _ui;
     delete _trayIcon;
+    delete _timer;
 }
 
 
@@ -32,10 +35,11 @@ void MainWindow::createTrayIcon(MainWindow *parent) {
     QMenu *trayIconMenu = new QMenu(this);
 
     // Create new, clickable actions
-    QAction *closeAction        = new QAction("Close", trayIconMenu);
-    QAction *showMessageAction  = new QAction("Show Balloon", trayIconMenu);
-    QAction *showAuthor         = new QAction("About", trayIconMenu);
-    QAction *retrieveCommitMessage = new QAction("Check Github", trayIconMenu);
+    QAction *closeAction            = new QAction("Close", trayIconMenu);
+    QAction *showMessageAction      = new QAction("Show Balloon", trayIconMenu);
+    QAction *showAuthor             = new QAction("About", trayIconMenu);
+    QAction *retrieveCommitMessage  = new QAction("Check Github", trayIconMenu);
+    QAction *startTimer             = new QAction("Watch Github", trayIconMenu);
 
 
     // Connect the actions so that we can do something when clicked
@@ -43,12 +47,15 @@ void MainWindow::createTrayIcon(MainWindow *parent) {
     trayIconMenu->connect(showMessageAction, SIGNAL(triggered(bool)), parent, SLOT(onShowBalloonMessageClicked()));
     trayIconMenu->connect(showAuthor, SIGNAL(triggered(bool)), parent, SLOT(onShowAuthorClicked()));
     trayIconMenu->connect(retrieveCommitMessage, SIGNAL(triggered(bool)), parent, SLOT(onCheckGithubClicked()));
+    trayIconMenu->connect(startTimer, SIGNAL(triggered(bool)), parent, SLOT(onWatchGithubClicked()));
+
 
     // Add the actions to our menu
     trayIconMenu->addAction(closeAction);
     trayIconMenu->addAction(showMessageAction);
     trayIconMenu->addAction(showAuthor);
     trayIconMenu->addAction(retrieveCommitMessage);
+    trayIconMenu->addAction(startTimer);
     _trayIcon->setContextMenu(trayIconMenu);
 
     // Show the finished trayicon
@@ -85,6 +92,38 @@ void MainWindow::onCheckGithubClicked() {
     connect(reply, SIGNAL(finished()), this, SLOT(onRequestFinished()));
 }
 
+void MainWindow::onWatchGithubClicked() {
+    // Github (non-authenticated) has a limit of max. 60 requests per hours. Thus, we just request it every 90 seconds to be safe.
+    if(!_timerStarted) {
+        // Ensure Singleton of our timer
+        _timerStarted = true;
+
+        if(!_timer->isActive()) {
+            _timer->start(10000);
+            connect(_timer, &QTimer::timeout, this, &MainWindow::onIntervalFinished);
+        }
+    }
+
+}
+
+// Gets called every 90 seconds.
+void MainWindow::onIntervalFinished() {
+    QNetworkAccessManager *networkManager = new QNetworkAccessManager();
+
+    QUrl url("https://api.github.com/repos/philippmeissner/Qt_TrayIcon/commits");
+    QNetworkRequest request(url);
+
+    QNetworkReply *reply = networkManager->get(request);
+
+    QSslSocket * sslSocket = new QSslSocket(this);
+    QSslConfiguration config = sslSocket->sslConfiguration();
+    config.setProtocol(QSsl::SslV2);
+
+    sslSocket->setSslConfiguration(config);
+    reply->setSslConfiguration(config);
+    connect(reply, &QNetworkReply::finished, this, &MainWindow::onRequestFinished);
+
+}
 
 void MainWindow::onRequestFinished() {
     // Error: qt.network.ssl: QSslSocket: cannot resolve SSLv2_server_method
